@@ -1,0 +1,466 @@
+# 🚀 Kripto Algoritmik Trading Bot
+
+**RSI + Volume Strategy ile BTC/USDT ve ETH/USDT otomatik trading**
+
+3x kaldıraçlı Bybit Futures üzerinde çalışan profesyonel algoritmik trading bot.
+
+## 📋 İçindekiler
+
+- [Özellikler](#-özellikler)
+- [Gereksinimler](#-gereksinimler)  
+- [Kurulum](#-kurulum)
+- [Konfigürasyon](#-konfigürasyon)
+- [Kullanım](#-kullanım)
+- [Backtest](#-backtest)
+- [Monitoring](#-monitoring)
+- [Troubleshooting](#-troubleshooting)
+
+## ⭐ Özellikler
+
+### Trading Stratejisi
+- **RSI (14) < 30** + **Volume > 1.8x ortalama** → LONG pozisyon
+- **Take Profit: %6** | **Stop Loss: %3**
+- **Trailing Stop**: %3 kar geçince +%1.5'e taşı
+- **RSI > 60** → Erken exit
+
+### Risk Yönetimi
+- Her işlemde **%1 risk** (Kelly Criterion)
+- **3x leverage** ile pozisyon büyütme
+- **3 ardışık kayıp** → 24 saat pause
+- **Likidasyon koruması** (en az %5 marj)
+
+### Teknik Özellikler
+- **Bybit Futures** entegrasyonu
+- **Testnet zorunlu** (14 gün)
+- **CSV log sistemi** (Telegram yok)
+- **Docker support** + **Systemd service**
+- **Acil kapatma** (`emergency_close.py`)
+
+## 🔧 Gereksinimler
+
+### Sistem Gereksinimleri
+```bash
+# Minimum
+CPU: 1 core
+RAM: 512MB
+Disk: 2GB
+Network: Stable internet
+
+# Önerilen
+CPU: 2 cores
+RAM: 1GB
+Disk: 5GB
+```
+
+### Yazılım Gereksinimleri
+- **Python 3.11+**
+- **TA-Lib** (technical analysis)
+- **Docker** (opsiyonel)
+- **Git**
+
+## 🚀 Kurulum
+
+### 1. Repository Clone
+```bash
+git clone https://github.com/yourusername/crypto-trading-bot.git
+cd crypto-trading-bot
+```
+
+### 2. Python Virtual Environment
+```bash
+# Virtual environment oluştur
+python3 -m venv venv
+source venv/bin/activate  # Linux/Mac
+# venv\Scripts\activate   # Windows
+
+# Dependencies yükle
+pip install -r requirements.txt
+```
+
+### 3. TA-Lib Kurulumu
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get update
+sudo apt-get install build-essential wget
+
+# TA-Lib compile
+wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
+tar -xzf ta-lib-0.4.0-src.tar.gz
+cd ta-lib/
+./configure --prefix=/usr
+make
+sudo make install
+cd ..
+pip install TA-Lib
+```
+
+**MacOS:**
+```bash
+brew install ta-lib
+pip install TA-Lib
+```
+
+**Windows:**
+```bash
+# Pre-compiled wheel download
+pip install https://download.lfd.uci.edu/pythonlibs/archived/TA_Lib-0.4.28-cp311-cp311-win_amd64.whl
+```
+
+### 4. Directory Structure Oluştur
+```bash
+mkdir -p logs data
+touch logs/trades.csv
+```
+
+## ⚙️ Konfigürasyon
+
+### 1. API Keys (Bybit)
+
+1. [Bybit Testnet](https://testnet.bybit.com) hesabı oluştur
+2. **API Management** → **Create API Key**
+3. İzinler:
+   - ✅ **Derivatives - Trade**
+   - ✅ **Derivatives - Read**
+   - ❌ **Spot Trading** (kapalı)
+   - ❌ **Wallet** (kapalı)
+
+### 2. Environment Variables
+```bash
+# .env dosyası oluştur
+cp .env.example .env
+
+# .env dosyasını düzenle
+nano .env
+```
+
+**.env içeriği:**
+```bash
+# Bybit API
+BYBIT_API_KEY=your_testnet_api_key
+BYBIT_API_SECRET=your_testnet_api_secret
+
+# Bot Config
+TESTNET=true
+SYMBOLS=BTC/USDT:USDT,ETH/USDT:USDT
+LEVERAGE=3
+RISK_PER_TRADE=0.01
+
+# Strategy
+RSI_OVERSOLD=30
+RSI_OVERBOUGHT=60
+VOLUME_MULTIPLIER=1.8
+TAKE_PROFIT=0.06
+STOP_LOSS=0.03
+```
+
+### 3. Log Directory Permissions
+```bash
+chmod 755 logs/
+chmod 644 logs/*.csv
+```
+
+## 🎯 Kullanım
+
+### Manuel Çalıştırma
+```bash
+# Bot'u başlat
+python bot.py
+
+# Arka planda çalıştır
+nohup python bot.py > logs/console.log 2>&1 &
+```
+
+### Docker ile Çalıştırma
+```bash
+# Image build
+docker build -t crypto-trading-bot .
+
+# Container çalıştır
+docker run -d \
+  --name crypto-bot \
+  --restart unless-stopped \
+  -v $(pwd)/logs:/app/logs \
+  -v $(pwd)/.env:/app/.env \
+  crypto-trading-bot
+
+# Logs izle
+docker logs -f crypto-bot
+```
+
+### Docker Compose
+```bash
+# Servis başlat
+docker-compose up -d
+
+# Logs izle
+docker-compose logs -f crypto-bot
+
+# Servis durdur
+docker-compose down
+```
+
+### Systemd Service (Production)
+```bash
+# Service dosyasını kopyala
+sudo cp crypto-bot.service /etc/systemd/system/
+
+# Service'i etkinleştir
+sudo systemctl daemon-reload
+sudo systemctl enable crypto-bot
+sudo systemctl start crypto-bot
+
+# Status kontrolü
+sudo systemctl status crypto-bot
+
+# Logs
+sudo journalctl -u crypto-bot -f
+```
+
+## 📊 Backtest
+
+### Backtest Çalıştırma
+```bash
+# Full backtest (2023-2024)
+python backtest.py
+
+# Custom date range
+python backtest.py --start 2023-06-01 --end 2024-01-01
+```
+
+### Backtest Sonuçları
+```bash
+# Results directory
+ls -la logs/
+  - backtest_results.csv    # Detaylı trade verileri
+  - backtest_summary.json   # Özet istatistikler
+
+# Başarı kriterleri
+✅ Win Rate ≥ 55%
+✅ Max Drawdown ≤ 20%  
+✅ Min 100 Trades
+✅ Profit Factor ≥ 1.3
+✅ Positive Return
+```
+
+### Backtest Analizi
+```python
+import pandas as pd
+import json
+
+# Trade results
+df = pd.read_csv('logs/backtest_results.csv')
+print(f"Total trades: {len(df)}")
+print(f"Win rate: {len(df[df['pnl_usdt'] > 0]) / len(df):.1%}")
+
+# Summary stats  
+with open('logs/backtest_summary.json') as f:
+    stats = json.load(f)
+    print(f"Sharpe ratio: {stats['sharpe_ratio']}")
+    print(f"Max drawdown: {stats['max_drawdown']:.1%}")
+```
+
+## 🔍 Monitoring
+
+### Log Monitoring
+```bash
+# Real-time trade log
+tail -f logs/trades.csv
+
+# System logs
+tail -f logs/system.log
+
+# Bot status
+grep "Status:" logs/system.log | tail -5
+```
+
+### Performance Tracking
+```bash
+# Daily PnL
+python -c "
+import pandas as pd
+df = pd.read_csv('logs/trades.csv')
+df['date'] = pd.to_datetime(df['timestamp']).dt.date
+daily = df.groupby('date')['pnl_usdt'].sum()
+print(daily.tail(7))
+"
+
+# Win rate
+python -c "
+import pandas as pd
+df = pd.read_csv('logs/trades.csv')
+wins = len(df[df['pnl_usdt'] > 0])
+total = len(df)
+print(f'Win rate: {wins/total:.1%} ({wins}/{total})')
+"
+```
+
+### Position Status
+```bash
+# Current positions
+python emergency_close.py status
+
+# Account balance
+python emergency_close.py balance
+```
+
+## 🚨 Acil Müdahale
+
+### Tüm Pozisyonları Kapat
+```bash
+# Güvenli kapatma (onay ister)
+python emergency_close.py close
+
+# Force kapatma (onaysız)
+python emergency_close.py force
+
+# Sadece status kontrol
+python emergency_close.py status
+```
+
+### Bot Durdurma
+```bash
+# Graceful shutdown
+pkill -TERM -f bot.py
+
+# Force kill
+pkill -KILL -f bot.py
+
+# Docker stop
+docker stop crypto-bot
+
+# Systemd stop
+sudo systemctl stop crypto-bot
+```
+
+## ⚠️ Troubleshooting
+
+### Yaygın Hatalar
+
+**1. API Connection Error**
+```bash
+❌ Exchange connection failed: Invalid API key
+
+# Çözüm:
+- .env dosyasında API key/secret kontrol et
+- Bybit testnet'te API key aktif mi kontrol et
+- IP whitelist ayarları kontrol et
+```
+
+**2. TA-Lib Import Error**
+```bash
+❌ ImportError: No module named 'talib'
+
+# Çözüm:
+sudo apt-get install build-essential
+wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
+# ... TA-Lib manual install
+pip install TA-Lib
+```
+
+**3. Insufficient Balance**
+```bash
+❌ Insufficient balance for trade
+
+# Çözüm:
+- Bybit testnet'te test coin al
+- Risk per trade azalt (0.005)
+- Position size kontrol et
+```
+
+**4. Rate Limit Exceeded**
+```bash
+❌ Rate limit exceeded
+
+# Çözüm:
+- Bot'ta enableRateLimit=True kontrol et
+- API call sıklığını azalt
+- Multiple API key kullan
+```
+
+### Log Analizi
+```bash
+# Error logs
+grep "ERROR" logs/system.log | tail -10
+
+# API errors
+grep "API" logs/system.log | grep -i error
+
+# Trading errors
+grep "Failed to open" logs/system.log
+
+# Performance issues
+grep "slow" logs/system.log
+```
+
+### Performans Optimizasyonu
+```bash
+# Memory usage
+ps aux | grep python
+
+# CPU usage
+top -p $(pgrep -f bot.py)
+
+# Network monitoring
+netstat -an | grep 8443  # Bybit port
+
+# Log rotation
+logrotate -f /etc/logrotate.d/crypto-bot
+```
+
+## 📈 Canlı Geçiş Planı
+
+### Faz 1: Testnet Validation (14 gün)
+1. **Bot'u testnet'te çalıştır**
+2. **Minimum 10 işlem** yap
+3. **%55+ win rate** hedefle
+4. **<%15 drawdown** koru
+5. **Log analizi** yap
+
+### Faz 2: Düşük Sermaye ($50)
+1. **Mainnet API** oluştur (withdraw kapalı)
+2. **50$ ile başla**
+3. **1 ay test** et
+4. **%10+ kâr** → sermaye artır
+
+### Faz 3: Ölçeklendirme
+```python
+# Aylık performansa göre
+if monthly_return > 0.15:
+    new_capital *= 1.5
+elif monthly_return > 0.08:
+    new_capital *= 1.2
+```
+
+## 📞 Destek
+
+### Community
+- **GitHub Issues**: Bug report ve feature request
+- **Discord**: Real-time chat ve destek
+- **Telegram**: Güncellemeler ve duyurular
+
+### Geliştirici
+- **Email**: your.email@example.com
+- **LinkedIn**: linkedin.com/in/yourprofile
+- **Twitter**: @yourtwitterhandle
+
+## ⚖️ Yasal Uyarı
+
+```
+⚠️ RİSK UYARISI:
+Bu bot yüksek riskli algoritmik trading yapar.
+- Sermayenizin %100'ünü kaybetme riski vardır
+- 3x kaldıraç riski 3 kat artırır
+- Sadece kaybetmeye gözünüz yumduğunuz parayi kullanın
+- Psikolojik disiplin çok önemlidir
+- Botu kurup unutun, müdahale etmeyin
+- Logları haftalık inceleyin
+```
+
+## 📄 Lisans
+
+MIT License - Ticari kullanım serbesttir.
+
+---
+
+**⚡ Bot hazır, copy-paste-run! Başarılar! ⚡**

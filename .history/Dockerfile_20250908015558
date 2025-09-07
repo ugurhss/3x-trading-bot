@@ -1,0 +1,76 @@
+# Dockerfile
+FROM python:3.11-slim
+
+# Install system dependencies for TA-Lib
+RUN apt-get update && apt-get install -y \
+    wget \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install TA-Lib
+RUN wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz && \
+    tar -xzf ta-lib-0.4.0-src.tar.gz && \
+    cd ta-lib/ && \
+    ./configure --prefix=/usr && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf ta-lib/ ta-lib-0.4.0-src.tar.gz
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application files
+COPY . .
+
+# Create logs directory
+RUN mkdir -p logs
+
+# Run bot
+CMD ["python", "bot.py"]
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD python -c "import ccxt; print('Bot is healthy')" || exit 1
+
+---
+
+# requirements.txt
+ccxt==4.1.45
+pandas==2.1.3
+TA-Lib==0.4.28
+numpy==1.25.2
+python-dotenv==1.0.0
+schedule==1.2.0
+
+---
+
+# .env.example
+# Bybit API credentials
+BYBIT_API_KEY=your_api_key_here
+BYBIT_API_SECRET=your_api_secret_here
+
+# Trading configuration
+TESTNET=true
+SYMBOLS=BTC/USDT:USDT,ETH/USDT:USDT
+LEVERAGE=3
+RISK_PER_TRADE=0.01
+
+# Strategy parameters
+RSI_OVERSOLD=30
+RSI_OVERBOUGHT=60
+VOLUME_MULTIPLIER=1.8
+TAKE_PROFIT=0.06
+STOP_LOSS=0.03
+
+# Risk management
+MAX_CONSECUTIVE_LOSSES=3
+PAUSE_HOURS=24
+
+---

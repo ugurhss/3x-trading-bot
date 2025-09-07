@@ -1,0 +1,127 @@
+version: '3.8'
+
+services:
+  crypto-bot:
+    build: .
+    container_name: crypto-trading-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    environment:
+      - TZ=UTC
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; exit(0 if os.path.exists('logs/system.log') else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+  # Log monitoring (optional)
+  log-viewer:
+    image: amir20/dozzle:latest
+    container_name: crypto-bot-logs
+    ports:
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DOZZLE_LEVEL=info
+    depends_on:
+      - crypto-bot
+
+---
+
+# systemd service file: /etc/systemd/system/crypto-bot.service
+[Unit]
+Description=Crypto Trading Bot
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=30
+User=your_username
+WorkingDirectory=/path/to/crypto-bot
+ExecStart=/usr/bin/python3 /path/to/crypto-bot/bot.py
+Environment=PYTHONPATH=/path/to/crypto-bot
+
+# Logging
+StandardOutput=append:/var/log/crypto-bot.log
+StandardError=append:/var/log/crypto-bot-error.log
+
+# Resource limits
+LimitNOFILE=65536
+MemoryLimit=512M
+
+[Install]
+WantedBy=multi-user.target
+
+---
+
+# .gitignore
+# Environment files
+.env
+.env.local
+.env.production
+
+# Logs
+logs/
+*.log
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data files
+data/
+backups/
+*.csv
+*.json
+
+# Temporary files
+temp/
+tmp/
